@@ -39,8 +39,8 @@ This project implements an optimized face recognition system specifically design
 
 1. Clone this repository:
    ```bash
-   git clone https://github.com/yourusername/face-recognition-imx8m.git
-   cd face-recognition-imx8m
+   git clone [https://github.com/yourusername/face-recognition-imx8m.git](https://github.com/12boopathi/flask_face_recognization_app.git)
+   cd flask_face_recognization_app
    ```
 
 2. Install Python dependencies:
