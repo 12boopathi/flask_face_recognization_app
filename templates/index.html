@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Face Recognition System</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .video-section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            max-width: 640px;
+            margin: 0 auto;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #f0f0f0;
+        }
+
+        #video-feed {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .video-overlay {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+
+        .control-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .control-section {
+            margin-bottom: 25px;
+        }
+
+        .control-section h3 {
+            margin-bottom: 15px;
+            color: #333;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 5px;
+        }
+
+        .button {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin: 5px;
+            min-width: 120px;
+        }
+
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .button:active {
+            transform: translateY(0);
+        }
+
+        .button.secondary {
+            background: linear-gradient(45deg, #f093fb, #f5576c);
+        }
+
+        .button.danger {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+        }
+
+        .button.success {
+            background: linear-gradient(45deg, #4ecdc4, #44a08d);
+        }
+
+        .button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status-bar {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .status-item:last-child {
+            border-bottom: none;
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .status-connected {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-recording {
+            background: #fff3cd;
+            color: #856404;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.6; }
+            100% { opacity: 1; }
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border-left: 4px solid #17a2b8;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border-left: 4px solid #28a745;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border-left: 4px solid #ffc107;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border-left: 4px solid #dc3545;
+        }
+
+        .names-section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .names-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .name-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            margin: 5px 0;
+            background: #f8f9fa;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .name-item:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+
+        .name-text {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .delete-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.3s ease;
+        }
+
+        .delete-btn:hover {
+            background: #c82333;
+            transform: scale(1.05);
+        }
+
+        .device-settings {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+
+        .device-group {
+            margin-bottom: 20px;
+        }
+
+        .device-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .device-select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .device-select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .operation-panel {
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .operation-title {
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .operation-status {
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+            color: #666;
+        }
+
+        .confirm-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .recording-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #ff4757;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: 600;
+            z-index: 1000;
+            animation: pulse 1s infinite;
+        }
+
+        @media (max-width: 1024px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .container {
+                padding: 15px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .confirm-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .button {
+                min-width: 200px;
+            }
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎭 Face Recognition System</h1>
+            <p>Advanced AI-powered face detection and recognition</p>
+        </div>
+
+        <!-- Recording Indicator -->
+        <div id="recording-indicator" class="recording-indicator hidden">
+            🎤 Recording...
+        </div>
+
+        <!-- Status Alert -->
+        <div id="status-alert" class="alert alert-info">
+            <span id="status-message">System Ready</span>
+        </div>
+
+        <!-- Main Grid -->
+        <div class="main-grid">
+            <!-- Video Section -->
+            <div class="video-section">
+                <h3 style="margin-bottom: 20px; text-align: center;">Live Camera Feed</h3>
+                <div class="video-container">
+                    <img id="video-feed" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQwIiBoZWlnaHQ9IjQ4MCIgdmlld0JveD0iMCAwIDY0MCA0ODAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI2NDAiIGhlaWdodD0iNDgwIiBmaWxsPSIjRjBGMEYwIi8+Cjx0ZXh0IHg9IjMyMCIgeT0iMjQwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjOTk5IiBmb250LXNpemU9IjI0Ij5DYW1lcmEgT2ZmbGluZTwvdGV4dD4KPC9zdmc+" alt="Camera Feed">
+                    <div class="video-overlay">
+                        <span id="faces-count">Faces: 0</span>
+                    </div>
+                </div>
+
+                <!-- Stats Grid -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number" id="total-faces">0</div>
+                        <div class="stat-label">Total Faces</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="detected-faces">0</div>
+                        <div class="stat-label">Currently Detected</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Control Panel -->
+            <div class="control-panel">
+                <!-- Camera Controls -->
+                <div class="control-section">
+                    <h3>📹 Camera Controls</h3>
+                    <button id="start-camera" class="button success">Start Camera</button>
+                    <button id="stop-camera" class="button danger">Stop Camera</button>
+                </div>
+
+                <!-- Voice Commands -->
+                <div class="control-section">
+                    <h3>🎤 Voice Commands</h3>
+                    <button id="voice-command" class="button">Listen for Command</button>
+                    <p style="font-size: 0.9rem; color: #666; margin-top: 10px;">
+                        Say: "add/new", "remove/delete", or "quit"
+                    </p>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="control-section">
+                    <h3>⚡ Quick Actions</h3>
+                    <button id="reset-system" class="button secondary">Reset System</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Operation Panel -->
+        <div id="operation-panel" class="operation-panel hidden">
+            <div class="operation-title" id="operation-title">Operation in Progress</div>
+            <div class="operation-status" id="operation-status">Waiting...</div>
+            
+            <!-- Add Face Operation -->
+            <div id="add-operation" class="hidden">
+                <button id="record-name" class="button">Record Name</button>
+                <div id="add-confirm" class="hidden">
+                    <p style="margin-bottom: 15px;">Confirm to add: <strong id="add-name-display"></strong></p>
+                    <div class="confirm-buttons">
+                        <button id="confirm-add-yes" class="button success">✓ Confirm</button>
+                        <button id="confirm-add-no" class="button danger">✗ Cancel</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Delete Face Operation -->
+            <div id="delete-operation" class="hidden">
+                <button id="record-delete-name" class="button">Record Name to Delete</button>
+                <div id="delete-confirm" class="hidden">
+                    <p style="margin-bottom: 15px;">Confirm to delete: <strong id="delete-name-display"></strong></p>
+                    <div class="confirm-buttons">
+                        <button id="confirm-delete-yes" class="button danger">✓ Confirm Delete</button>
+                        <button id="confirm-delete-no" class="button success">✗ Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Grid -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+            <!-- Device Settings -->
+            <div class="device-settings">
+                <h3 style="margin-bottom: 20px;">⚙️ Device Settings</h3>
+                
+                <div class="device-group">
+                    <label for="video-device">Video Device:</label>
+                    <select id="video-device" class="device-select">
+                        <option value="0">Loading...</option>
+                    </select>
+                </div>
+
+                <div class="device-group">
+                    <label for="audio-input-device">Audio Input:</label>
+                    <select id="audio-input-device" class="device-select">
+                        <option value="default">Loading...</option>
+                    </select>
+                </div>
+
+                <div class="device-group">
+                    <label for="audio-output-device">Audio Output:</label>
+                    <select id="audio-output-device" class="device-select">
+                        <option value="default">Loading...</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Registered Faces -->
+            <div class="names-section">
+                <h3 style="margin-bottom: 20px;">👥 Registered Faces</h3>
+                <div id="names-list" class="names-list">
+                    <div style="text-align: center; color: #666; padding: 20px;">
+                        No faces registered yet
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Bar -->
+        <div class="status-bar">
+            <div class="status-item">
+                <span><strong>Camera Status:</strong></span>
+                <span class="status-badge" id="camera-status">Disconnected</span>
+            </div>
+            <div class="status-item">
+                <span><strong>System Status:</strong></span>
+                <span class="status-badge status-connected" id="system-status">Ready</span>
+            </div>
+            <div class="status-item">
+                <span><strong>Recording:</strong></span>
+                <span class="status-badge" id="recording-status">Idle</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Socket.IO
+        const socket = io();
+
+        // DOM Elements
+        const elements = {
+            videoFeed: document.getElementById('video-feed'),
+            facesCount: document.getElementById('faces-count'),
+            totalFaces: document.getElementById('total-faces'),
+            detectedFaces: document.getElementById('detected-faces'),
+            statusAlert: document.getElementById('status-alert'),
+            statusMessage: document.getElementById('status-message'),
+            recordingIndicator: document.getElementById('recording-indicator'),
+            operationPanel: document.getElementById('operation-panel'),
+            operationTitle: document.getElementById('operation-title'),
+            operationStatus: document.getElementById('operation-status'),
+            namesList: document.getElementById('names-list'),
+            cameraStatus: document.getElementById('camera-status'),
+            systemStatus: document.getElementById('system-status'),
+            recordingStatus: document.getElementById('recording-status'),
+            
+            // Buttons
+            startCamera: document.getElementById('start-camera'),
+            stopCamera: document.getElementById('stop-camera'),
+            voiceCommand: document.getElementById('voice-command'),
+            resetSystem: document.getElementById('reset-system'),
+            recordName: document.getElementById('record-name'),
+            recordDeleteName: document.getElementById('record-delete-name'),
+            confirmAddYes: document.getElementById('confirm-add-yes'),
+            confirmAddNo: document.getElementById('confirm-add-no'),
+            confirmDeleteYes: document.getElementById('confirm-delete-yes'),
+            confirmDeleteNo: document.getElementById('confirm-delete-no'),
+            
+            // Device selects
+            videoDevice: document.getElementById('video-device'),
+            audioInputDevice: document.getElementById('audio-input-device'),
+            audioOutputDevice: document.getElementById('audio-output-device'),
+            
+            // Operation sections
+            addOperation: document.getElementById('add-operation'),
+            deleteOperation: document.getElementById('delete-operation'),
+            addConfirm: document.getElementById('add-confirm'),
+            deleteConfirm: document.getElementById('delete-confirm'),
+            addNameDisplay: document.getElementById('add-name-display'),
+            deleteNameDisplay: document.getElementById('delete-name-display')
+        };
+
+        // State
+        let currentOperation = null;
+
+        // Event Listeners
+        elements.startCamera.addEventListener('click', () => {
+            socket.emit('start_camera');
+        });
+
+        elements.stopCamera.addEventListener('click', () => {
+            socket.emit('stop_camera');
+        });
+
+        elements.voiceCommand.addEventListener('click', () => {
+            socket.emit('voice_command');
+        });
+
+        elements.resetSystem.addEventListener('click', () => {
+            socket.emit('reset_system');
+        });
+
+        elements.recordName.addEventListener('click', () => {
+            socket.emit('record_name');
+        });
+
+        elements.recordDeleteName.addEventListener('click', () => {
+            socket.emit('record_delete_name');
+        });
+
+        elements.confirmAddYes.addEventListener('click', () => {
+            socket.emit('confirm_add', { confirmed: true });
+        });
+
+        elements.confirmAddNo.addEventListener('click', () => {
+            socket.emit('confirm_add', { confirmed: false });
+        });
+
+        elements.confirmDeleteYes.addEventListener('click', () => {
+            socket.emit('confirm_delete', { confirmed: true });
+        });
+
+        elements.confirmDeleteNo.addEventListener('click', () => {
+            socket.emit('confirm_delete', { confirmed: false });
+        });
+
+        // Device change handlers
+        elements.videoDevice.addEventListener('change', (e) => {
+            socket.emit('update_device', { type: 'video', id: parseInt(e.target.value) });
+        });
+
+        elements.audioInputDevice.addEventListener('change', (e) => {
+            socket.emit('update_device', { type: 'audio_input', id: e.target.value });
+        });
+
+        elements.audioOutputDevice.addEventListener('change', (e) => {
+            socket.emit('update_device', { type: 'audio_output', id: e.target.value });
+        });
+
+        // Socket event handlers
+        socket.on('video_frame', (data) => {
+            elements.videoFeed.src = 'data:image/jpeg;base64,' + data.frame;
+            elements.facesCount.textContent = `Faces: ${data.faces_detected}`;
+            elements.detectedFaces.textContent = data.faces_detected;
+        });
+
+        socket.on('status_update', (data) => {
+            updateStatus(data.message, data.type);
+        });
+
+        socket.on('recording_status', (data) => {
+            if (data.recording) {
+                elements.recordingIndicator.classList.remove('hidden');
+                elements.recordingStatus.textContent = 'Recording';
+                elements.recordingStatus.className = 'status-badge status-recording';
+            } else {
+                elements.recordingIndicator.classList.add('hidden');
+                elements.recordingStatus.textContent = 'Idle';
+                elements.recordingStatus.className = 'status-badge';
+            }
+        });
+
+        socket.on('operation_update', (data) => {
+            currentOperation = data.operation;
+            if (data.operation === 'add') {
+                showOperationPanel('Adding New Face', 'Listening for voice command...');
+                elements.addOperation.classList.remove('hidden');
+                elements.deleteOperation.classList.add('hidden');
+            } else if (data.operation === 'delete') {
+                showOperationPanel('Deleting Face', 'Listening for voice command...');
+                elements.deleteOperation.classList.remove('hidden');
+                elements.addOperation.classList.add('hidden');
+            } else {
+                hideOperationPanel();
+            }
+        });
+
+        socket.on('name_recorded', (data) => {
+            elements.addNameDisplay.textContent = data.name;
+            elements.addConfirm.classList.remove('hidden');
+            elements.operationStatus.textContent = 'Name recorded. Please confirm.';
+        });
+
+        socket.on('delete_name_recorded', (data) => {
+            elements.deleteNameDisplay.textContent = data.name;
+            elements.deleteConfirm.classList.remove('hidden');
+            elements.operationStatus.textContent = 'Name recorded. Please confirm deletion.';
+        });
+
+        socket.on('operation_complete', () => {
+            hideOperationPanel();
+            loadNames();
+        });
+
+        socket.on('system_reset', () => {
+            hideOperationPanel();
+            updateCameraStatus('Disconnected');
+            elements.totalFaces.textContent = '0';
+            elements.detectedFaces.textContent = '0';
+            loadNames();
+        });
+
+        // Utility functions
+        function updateStatus(message, type) {
+            elements.statusMessage.textContent = message;
+            elements.statusAlert.className = `alert alert-${type}`;
+        }
+
+        function updateCameraStatus(status) {
+            elements.cameraStatus.textContent = status;
+            elements.cameraStatus.className = status === 'Connected' ? 'status-badge status-connected' : 'status-badge status-disconnected';
+        }
+
+        function showOperationPanel(title, status) {
+            elements.operationTitle.textContent = title;
+            elements.operationStatus.textContent = status;
+            elements.operationPanel.classList.remove('hidden');
+            elements.addConfirm.classList.add('hidden');
+            elements.deleteConfirm.classList.add('hidden');
+        }
+
+        function hideOperationPanel() {
+            elements.operationPanel.classList.add('hidden');
+            elements.addOperation.classList.add('hidden');
+            elements.deleteOperation.classList.add('hidden');
+            currentOperation = null;
+        }
+
+        function loadDevices() {
+            fetch('/api/devices')
+                .then(response => response.json())
+                .then(data => {
+                    // Populate device selects
+                    populateSelect(elements.videoDevice, data.video_devices);
+                    populateSelect(elements.audioInputDevice, data.audio_input_devices);
+                    populateSelect(elements.audioOutputDevice, data.audio_output_devices);
+                })
+                .catch(console.error);
+        }
+
+        function populateSelect(selectElement, options) {
+            selectElement.innerHTML = '';
+            options.forEach(option => {
+                const optionElement = document.createElement('option');
+                optionElement.value = option.id;
+                optionElement.textContent = option.display;
+                selectElement.appendChild(optionElement);
+            });
+        }
+
+        function loadNames() {
+            fetch('/api/names')
+                .then(response => response.json())
+                .then(data => {
+                    elements.totalFaces.textContent = data.total_faces;
+                    updateNamesList(data.names);
+                })
+                .catch(console.error);
+        }
+
+        function updateNamesList(names) {
+            if (names.length === 0) {
+                elements.namesList.innerHTML = '<div style="text-align: center; color: #666; padding: 20px;">No faces registered yet</div>';
+                return;
+            }
+
+            elements.namesList.innerHTML = names.map(name => `
+                <div class="name-item">
+                    <span class="name-text">${name}</span>
+                    <button class="delete-btn" onclick="quickDelete('${name}')">Delete</button>
+                </div>
+            `).join('');
+        }
+
+        function quickDelete(name) {
+            if (confirm(`Are you sure you want to delete "${name}"?`)) {
+                socket.emit('quick_delete', { name: name });
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadDevices();
+            loadNames();
+            
+            // Check initial status
+            fetch('/api/status')
+                .then(response => response.json())
+                .then(data => {
+                    updateStatus(data.status_message, data.status_type);
+                    updateCameraStatus(data.camera_status);
+                    elements.detectedFaces.textContent = data.faces_detected;
+                })
+                .catch(console.error);
+        });
+
+        // Handle connection events
+        socket.on('connect', () => {
+            elements.systemStatus.textContent = 'Connected';
+            elements.systemStatus.className = 'status-badge status-connected';
+        });
+
+        socket.on('disconnect', () => {
+            elements.systemStatus.textContent = 'Disconnected';
+            elements.systemStatus.className = 'status-badge status-disconnected';
+        });
+    </script>
+</body>
+</html>
