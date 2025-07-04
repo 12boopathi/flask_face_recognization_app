@@ -39,7 +39,7 @@ This project implements an optimized face recognition system specifically design
 
 1. Clone this repository:
    ```bash
-   git clone (https://github.com/12boopathi/flask_face_recognization_app.git)
+   git clone https://github.com/12boopathi/flask_face_recognization_app.git
    cd flask_face_recognization_app
    ```
 
