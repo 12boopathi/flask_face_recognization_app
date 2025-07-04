@@ -1,0 +1,21 @@
+# Core dependencies
+flask==2.3.2
+flask-socketio==5.3.4
+eventlet==0.33.3
+numpy==1.24.3  # Use 1.24.x for better ARM compatibility
+
+# Computer Vision
+opencv-python-headless==4.7.0.72  # Headless version for ARM
+
+# Machine Learning
+tensorflow==2.10.1  # Last version with official Python 3.7 support
+tflite-runtime==2.10.0  # For better performance on ARM
+whisper==1.1.10  # Speech recognition
+
+# Audio processing
+sounddevice==0.4.6  # For audio capture
+pydub==0.25.1  # Audio processing
+
+# Utilities
+python-dotenv==1.0.0
+pyyaml==6.0
